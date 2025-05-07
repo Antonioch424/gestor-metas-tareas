@@ -1,0 +1,19 @@
+{
+  "files": {
+    "main.css": "/gestor-metas-tareas/static/css/main.0ac14d5d.css",
+    "main.js": "/gestor-metas-tareas/static/js/main.24a151d6.js",
+    "static/media/img-5.png": "/gestor-metas-tareas/static/media/img-5.467b2f21b8b7f8167ef9.png",
+    "static/media/img-1.png": "/gestor-metas-tareas/static/media/img-1.c83b218e5b009cf09665.png",
+    "static/media/img-3.png": "/gestor-metas-tareas/static/media/img-3.7478785edf9b5783f66f.png",
+    "static/media/img-2.png": "/gestor-metas-tareas/static/media/img-2.3d7fc01d5140b04d5e74.png",
+    "static/media/img-4.png": "/gestor-metas-tareas/static/media/img-4.e14a48b289c26cb7cbf7.png",
+    "static/media/icono1.png": "/gestor-metas-tareas/static/media/icono1.51f1f55c02f33c51c22d.png",
+    "index.html": "/gestor-metas-tareas/index.html",
+    "main.0ac14d5d.css.map": "/gestor-metas-tareas/static/css/main.0ac14d5d.css.map",
+    "main.24a151d6.js.map": "/gestor-metas-tareas/static/js/main.24a151d6.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0ac14d5d.css",
+    "static/js/main.24a151d6.js"
+  ]
+}
