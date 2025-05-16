@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { PlusCircle, Trash2, Edit, Save, X, ChevronRight, ChevronDown, ArrowUp, ArrowDown, Calendar, Flag, CheckCircle2, Clock, Upload, Download, Target, ListTodo, FileJson, Plus, Sparkles } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -68,7 +68,7 @@ const styles = {
     minHeight: '100vh',
     fontFamily: 'Inter, system-ui, sans-serif',
     color: colors.text,
-    paddingTop: '280px'
+    paddingTop: '320px'
   },
   headerContainer: {
     position: 'fixed',
@@ -143,8 +143,8 @@ const styles = {
     height: '120px'
   },
   header: {
-    marginTop: '0',
-    marginBottom: '8px',
+    marginTop: '-35px',
+    marginBottom: '-15px',
     textAlign: 'center'
   },
   title: {
@@ -193,6 +193,94 @@ const styles = {
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
     zIndex: 999,
     flexWrap: 'wrap'
+  },
+  missionVisionContainer: {
+    position: 'relative',
+    backgroundColor: colors.card,
+    padding: '16px 24px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    marginBottom: '20px',
+    borderRadius: '12px',
+    border: `1px solid ${colors.border}`,
+    transition: 'all 0.3s ease-in-out',
+    minHeight: '50px'
+  },
+  missionVisionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '16px',
+    cursor: 'pointer',
+    padding: '8px 0',
+    backgroundColor: colors.background,
+    borderRadius: '8px',
+    padding: '12px'
+  },
+  missionVisionTitle: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: colors.text,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  missionVisionContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    padding: '16px',
+    backgroundColor: colors.background,
+    borderRadius: '8px'
+  },
+  missionVisionSection: {
+    backgroundColor: colors.card,
+    padding: '16px',
+    borderRadius: '8px',
+    border: `1px solid ${colors.border}`,
+    marginBottom: '16px'
+  },
+  missionVisionText: {
+    fontSize: '14px',
+    color: colors.text,
+    lineHeight: '1.5',
+    marginBottom: '16px',
+    whiteSpace: 'pre-wrap'
+  },
+  missionVisionEditButton: {
+    backgroundColor: colors.primary,
+    color: colors.white,
+    border: 'none',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'background-color 0.2s'
+  },
+  missionVisionTextarea: {
+    width: '100%',
+    minHeight: '100px',
+    padding: '12px',
+    borderRadius: '6px',
+    border: `1px solid ${colors.border}`,
+    fontSize: '14px',
+    marginBottom: '16px',
+    resize: 'vertical',
+    backgroundColor: colors.white
+  },
+  missionVisionSaveButton: {
+    backgroundColor: colors.success,
+    color: colors.white,
+    border: 'none',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
   },
   inputContainer: {
     position: 'fixed',
@@ -573,15 +661,161 @@ function TaskManager() {
 
   const [showAddMetaModal, setShowAddMetaModal] = useState(false);
   const metaFileInputRef = useRef(null);
+  const [selectedMetaFile, setSelectedMetaFile] = useState(null);
+  const [isMissionVisionExpanded, setIsMissionVisionExpanded] = useState(false);
+  const [mission, setMission] = useState('Nuestra misión es...');
+  const [vision, setVision] = useState('Nuestra visión es...');
+  const [isEditingMissionVision, setIsEditingMissionVision] = useState(false);
 
   const [fraseActual, setFraseActual] = useState(0);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const images = ['img-1.png', 'img-2.png', 'img-3.png'];
 
-  useEffect(() => {
-    localStorage.setItem('task-manager-items', JSON.stringify(items));
+  // Optimización: Memoización de findItemById
+  const findItemById = useMemo(() => {
+    return (items, id) => {
+      for (const item of items) {
+        if (item.id === id) return item;
+        if (item.children && item.children.length > 0) {
+          const found = findItemById(item.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
   }, [items]);
+
+  // Optimización: Manejo de errores en localStorage
+  useEffect(() => {
+    try {
+      const savedItems = localStorage.getItem('task-manager-items');
+      if (savedItems) {
+        const parsedItems = JSON.parse(savedItems);
+        // Validar estructura de datos
+        if (Array.isArray(parsedItems)) {
+          setItems(parsedItems);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar items:', error);
+      // Mantener los items por defecto
+    }
+  }, []);
+
+  // Optimización: Guardado seguro en localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('task-manager-items', JSON.stringify(items));
+    } catch (error) {
+      console.error('Error al guardar items:', error);
+    }
+  }, [items]);
+
+  // Optimización: Persistencia de Misión y Visión
+  useEffect(() => {
+    try {
+      const savedMission = localStorage.getItem('mission');
+      const savedVision = localStorage.getItem('vision');
+      if (savedMission) setMission(savedMission);
+      if (savedVision) setVision(savedVision);
+    } catch (error) {
+      console.error('Error al cargar misión y visión:', error);
+    }
+  }, []);
+
+  // Optimización: useCallback para funciones de manejo
+  const handleItemClick = useCallback((item, event) => {
+    if (event) event.stopPropagation();
+    setSelectedItem(item.id);
+    if (editingItem) {
+      setEditingItem(null);
+    }
+  }, [editingItem]);
+
+  const toggleExpand = useCallback((id, event) => {
+    if (event) event.stopPropagation();
+    setExpandedItems(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  }, []);
+
+  // Optimización: Validación de datos
+  const validateItem = (item) => {
+    if (!item.text || item.text.trim() === '') {
+      throw new Error('El texto no puede estar vacío');
+    }
+    if (new Date(item.dueDate) < new Date()) {
+      throw new Error('La fecha no puede ser en el pasado');
+    }
+    return true;
+  };
+
+  // Optimización: Manejo seguro de eliminación
+  const deleteItem = useCallback((itemId, itemType, event) => {
+    if (event) event.stopPropagation();
+    
+    if (window.confirm('¿Estás seguro de que quieres eliminar este item?')) {
+      const deleteItemById = (items) => {
+        const filteredItems = items.filter(item => !(item.id === itemId && item.type === itemType));
+        return filteredItems.map(item => {
+          if (item.children && item.children.length > 0) {
+            return {
+              ...item,
+              children: deleteItemById(item.children)
+            };
+          }
+          return item;
+        });
+      };
+      
+      setItems(deleteItemById(items));
+      setSelectedItem(null);
+    }
+  }, [items]);
+
+  // Optimización: Guardado seguro de Misión y Visión
+  const handleMissionVisionSave = useCallback(() => {
+    try {
+      localStorage.setItem('mission', mission);
+      localStorage.setItem('vision', vision);
+      setIsEditingMissionVision(false);
+    } catch (error) {
+      console.error('Error al guardar misión y visión:', error);
+    }
+  }, [mission, vision]);
+
+  // Optimización: Manejo seguro de importación
+  const handleImport = useCallback((event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          if (!Array.isArray(importedData)) {
+            throw new Error('Formato de archivo inválido');
+          }
+          // Validar estructura de datos
+          const processDates = (items) => {
+            return items.map(item => ({
+              ...item,
+              dueDate: new Date(item.dueDate),
+              children: item.children ? processDates(item.children) : []
+            }));
+          };
+          const processedData = processDates(importedData);
+          setItems(processedData);
+          localStorage.setItem('task-manager-items', JSON.stringify(processedData));
+        } catch (error) {
+          console.error('Error al importar el archivo:', error);
+          alert('Error al importar el archivo. Asegúrate de que sea un JSON válido.');
+        }
+      };
+      reader.readAsText(file);
+    }
+  }, []);
 
   useEffect(() => {
     const expandedState = {};
@@ -619,98 +853,55 @@ function TaskManager() {
     return 'pending';
   };
 
-  const toggleExpand = (id, event) => {
-    if (event) event.stopPropagation();
-    setExpandedItems(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
-
-  const handleItemClick = (item, event) => {
-    if (event) event.stopPropagation();
-    setSelectedItem(item.id);
-    if (editingItem) {
-      setEditingItem(null);
-    }
-  };
-
-  const startEditing = (item, event) => {
-    if (event) event.stopPropagation();
-    setSelectedItem(item.id);
-    setEditingItem({
-      id: item.id,
-      text: item.text,
-      priority: item.priority,
-      dueDate: new Date(item.dueDate),
-      status: item.status,
-      type: item.type
-    });
-  };
-
-  const saveEdit = (event) => {
+  const saveEdit = useCallback((event) => {
     if (event) event.stopPropagation();
     if (!editingItem) return;
     
-    const updateItem = (items) => {
-      return items.map(item => {
-        if (item.id === editingItem.id && item.type === editingItem.type) {
-          return {
-            ...item,
-            text: editingItem.text,
-            priority: editingItem.priority,
-            dueDate: editingItem.dueDate,
-            status: editingItem.status
-          };
-        }
-        if (item.children && item.children.length > 0) {
-          return {...item, children: updateItem(item.children)};
-        }
-        return item;
-      });
-    };
-    
-    setItems(updateItem(items));
-    setEditingItem(null);
-  };
-
-  const handleImport = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importedData = JSON.parse(e.target.result);
-          // Asegurarse de que las fechas se conviertan correctamente
-          const processDates = (items) => {
-            return items.map(item => ({
+    try {
+      validateItem(editingItem);
+      
+      const updateItem = (items) => {
+        return items.map(item => {
+          if (item.id === editingItem.id && item.type === editingItem.type) {
+            return {
               ...item,
-              dueDate: new Date(item.dueDate),
-              children: item.children ? processDates(item.children) : []
-            }));
-          };
-          const processedData = processDates(importedData);
-          setItems(processedData);
-          localStorage.setItem('task-manager-items', JSON.stringify(processedData));
-        } catch (error) {
-          alert('Error al importar el archivo. Asegúrate de que sea un JSON válido.');
-        }
+              text: editingItem.text,
+              priority: editingItem.priority,
+              dueDate: editingItem.dueDate,
+              status: editingItem.status
+            };
+          }
+          if (item.children && item.children.length > 0) {
+            return {...item, children: updateItem(item.children)};
+          }
+          return item;
+        });
       };
-      reader.readAsText(file);
+      
+      setItems(prevItems => updateItem(prevItems));
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Error al guardar edición:', error);
+      alert(error.message);
     }
-  };
+  }, [editingItem]);
 
-  const handleExport = () => {
-    const dataStr = JSON.stringify(items, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = 'metas-objetivos-tareas.json';
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
+  const handleExport = useCallback(() => {
+    try {
+      const dataStr = JSON.stringify(items, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = 'metas-objetivos-tareas.json';
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
+  }, [items]);
 
   const calculateProgress = (item) => {
     if (!item.children || item.children.length === 0) {
@@ -768,88 +959,66 @@ function TaskManager() {
     );
   };
 
-  const addNewItem = (parentId = null, type = 'meta', event) => {
+  const addNewItem = useCallback((parentId = null, type = 'meta', event) => {
     if (event) event.stopPropagation();
     
-    if (!newItemText.trim()) return;
-    
-    const newItem = {
-      id: nextId,
-      type: type,
-      text: newItemText,
-      priority: newItemPriority,
-      dueDate: newItemDueDate,
-      status: 'pending',
-      children: []
-    };
-    
-    setNextId(nextId + 1);
-    
-    if (parentId === null) {
-      setItems([...items, newItem]);
-    } else {
-      const addChildToParent = (items) => {
-        return items.map(item => {
-          if (item.id === parentId) {
-            if (item.type === 'tarea') {
-              return item;
-            }
-            return {
-              ...item,
-              children: [...item.children, newItem]
-            };
-          }
-          if (item.children && item.children.length > 0) {
-            return {
-              ...item,
-              children: addChildToParent(item.children)
-            };
-          }
-          return item;
-        });
-      };
-      
-      setItems(addChildToParent(items));
-    }
-    
-    setNewItemText('');
-    setNewItemPriority('medium');
-    setNewItemDueDate(new Date());
-    setNewItemParentId(null);
-  };
-
-  const findItemById = (items, id) => {
-    for (const item of items) {
-      if (item.id === id) return item;
-      if (item.children && item.children.length > 0) {
-        const found = findItemById(item.children, id);
-        if (found) return found;
+    try {
+      if (!newItemText.trim()) {
+        throw new Error('El texto no puede estar vacío');
       }
+
+      const newItem = {
+        id: nextId,
+        type: type,
+        text: newItemText,
+        priority: newItemPriority,
+        dueDate: newItemDueDate,
+        status: 'pending',
+        children: []
+      };
+
+      validateItem(newItem);
+      
+      setNextId(nextId + 1);
+      
+      if (parentId === null) {
+        setItems(prevItems => [...prevItems, newItem]);
+      } else {
+        const addChildToParent = (items) => {
+          return items.map(item => {
+            if (item.id === parentId) {
+              if (item.type === 'tarea') {
+                return item;
+              }
+              return {
+                ...item,
+                children: [...item.children, newItem]
+              };
+            }
+            if (item.children && item.children.length > 0) {
+              return {
+                ...item,
+                children: addChildToParent(item.children)
+              };
+            }
+            return item;
+          });
+        };
+        
+        setItems(prevItems => addChildToParent(prevItems));
+      }
+      
+      setNewItemText('');
+      setNewItemPriority('medium');
+      setNewItemDueDate(new Date());
+      setNewItemParentId(null);
+    } catch (error) {
+      console.error('Error al añadir item:', error);
+      alert(error.message);
     }
-    return null;
-  };
+  }, [nextId, newItemText, newItemPriority, newItemDueDate]);
 
-  const deleteItem = (itemId, itemType, event) => {
-    if (event) event.stopPropagation();
-    
-    const deleteItemById = (items) => {
-      const filteredItems = items.filter(item => !(item.id === itemId && item.type === itemType));
-      return filteredItems.map(item => {
-        if (item.children && item.children.length > 0) {
-          return {
-            ...item,
-            children: deleteItemById(item.children)
-          };
-        }
-        return item;
-      });
-    };
-    
-    setItems(deleteItemById(items));
-    setSelectedItem(null);
-  };
-
-  const toggleStatus = (itemId, itemType, event) => {
+  const toggleStatus = useCallback((itemId, itemType, event) => {
     if (event) event.stopPropagation();
     
     const updateStatus = (items) => {
@@ -870,8 +1039,21 @@ function TaskManager() {
       });
     };
     
-    setItems(updateStatus(items));
-  };
+    setItems(prevItems => updateStatus(prevItems));
+  }, []);
+
+  const startEditing = useCallback((item, event) => {
+    if (event) event.stopPropagation();
+    setSelectedItem(item.id);
+    setEditingItem({
+      id: item.id,
+      text: item.text,
+      priority: item.priority,
+      dueDate: new Date(item.dueDate),
+      status: item.status,
+      type: item.type
+    });
+  }, []);
 
   const filterItems = (items) => {
     return items.filter(item => {
@@ -1206,6 +1388,96 @@ function TaskManager() {
     }
   };
 
+  const toggleMissionVision = () => {
+    setIsMissionVisionExpanded(!isMissionVisionExpanded);
+  };
+
+  const handleMissionVisionEdit = () => {
+    setIsEditingMissionVision(true);
+  };
+
+  const renderMissionVision = () => {
+    return (
+      <div style={{
+        ...styles.missionVisionContainer,
+        maxHeight: isMissionVisionExpanded ? '1000px' : '50px',
+        overflow: 'hidden'
+      }}>
+        <div style={styles.missionVisionHeader} onClick={toggleMissionVision}>
+          <div style={styles.missionVisionTitle}>
+            {isMissionVisionExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+            Misión y Visión
+          </div>
+        </div>
+        <div style={{
+          ...styles.missionVisionContent,
+          opacity: isMissionVisionExpanded ? 1 : 0,
+          height: isMissionVisionExpanded ? 'auto' : '0',
+          visibility: isMissionVisionExpanded ? 'visible' : 'hidden'
+        }}>
+          <div style={styles.missionVisionSection}>
+            <h3 style={{ marginBottom: '16px', color: colors.text, fontSize: '16px', fontWeight: 'bold' }}>Misión</h3>
+            {isEditingMissionVision ? (
+              <>
+                <textarea
+                  style={styles.missionVisionTextarea}
+                  value={mission}
+                  onChange={(e) => setMission(e.target.value)}
+                  placeholder="Escribe la misión aquí..."
+                />
+                <button
+                  style={styles.missionVisionSaveButton}
+                  onClick={handleMissionVisionSave}
+                >
+                  <Save size={16} /> Guardar
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={styles.missionVisionText}>{mission}</p>
+                <button
+                  style={styles.missionVisionEditButton}
+                  onClick={handleMissionVisionEdit}
+                >
+                  <Edit size={16} /> Editar
+                </button>
+              </>
+            )}
+          </div>
+          <div style={styles.missionVisionSection}>
+            <h3 style={{ marginBottom: '16px', color: colors.text, fontSize: '16px', fontWeight: 'bold' }}>Visión</h3>
+            {isEditingMissionVision ? (
+              <>
+                <textarea
+                  style={styles.missionVisionTextarea}
+                  value={vision}
+                  onChange={(e) => setVision(e.target.value)}
+                  placeholder="Escribe la visión aquí..."
+                />
+                <button
+                  style={styles.missionVisionSaveButton}
+                  onClick={handleMissionVisionSave}
+                >
+                  <Save size={16} /> Guardar
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={styles.missionVisionText}>{vision}</p>
+                <button
+                  style={styles.missionVisionEditButton}
+                  onClick={handleMissionVisionEdit}
+                >
+                  <Edit size={16} /> Editar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderAddMetaModal = () => {
     if (!showAddMetaModal) return null;
 
@@ -1362,6 +1634,9 @@ function TaskManager() {
 
       <div style={styles.header}>
         <h1 style={styles.title}>GESTOR DE METAS OBJETIVOS Y TAREAS - Organiza tus metas, objetivos y tareas de manera eficiente</h1>
+      </div>
+      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+        {renderMissionVision()}
       </div>
       <div style={styles.mainContent}>
         <div style={styles.card}>
